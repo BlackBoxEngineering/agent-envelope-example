@@ -1,0 +1,12 @@
+node_modules/
+
+# Environment variables — never commit credentials
+.env
+.env.local
+.env.*.local
+
+# Vault-issued artifacts — exported from the console per account, keep out of source control.
+# None of these contain a vault root or passphrase, but they are account-specific.
+mint-delegate.json
+public-record.json
+signed-payload.json
