@@ -1,116 +1,123 @@
 # agent-envelope-example
 
-Integration examples for `agent-envelope-sdk`, showing the two official modes.
+Integration examples for [`agent-envelope-sdk`](https://www.npmjs.com/package/agent-envelope-sdk),
+showing the two layers of the product.
 
-## Two modes, one substrate
+## Two layers, one substrate
 
-AgentEnvelope is **decentralised at the crypto layer** and **governed at the
-custody layer**. The same deterministic core powers both; only the authority
-surface differs.
+The sovereign crypto layer is **free, offline, and requires no account**. The
+hosted governance layer is **optional, but it is the product layer you usually
+want in production**: it adds API-keyed operation control, public records, mint
+receipts, verification events, and audit trails on top of the same deterministic
+core.
 
-| | Sovereign mode | Custody mode |
+| | Sovereign | Portal-governed |
 |---|---|---|
-| Authority | A self-held root | A vault-issued delegate |
-| Credential | None | Vault-issued `AE_API_KEY` |
-| Network | None — fully offline | Hosted mint / verify |
-| Governance | None | Policy, membership, audit, decay |
-| Revocation | Decay + time windows only | + key rotation, membership, policy |
+| Authority source | A self-held root | A MintDelegate issued from the portal |
+| Credential | None | Portal-issued `AE_API_KEY` |
+| Network | None — fully offline | Hosted mint / verify / lookup |
+| Governance | None | Public records, receipts, events, audit |
+| Revocation | Decay + time windows only | + API key rotation and hosted enforcement |
 | Example | `sovereign.js` | `bot.js` + `verifier.js` |
 
-Sovereign mode is the free, unstoppable substrate. Custody mode is the optional
-governed surface on top of it — neither replaces the other.
+Sovereign mode is the free, unstoppable substrate. Portal governance is the
+optional layer on top — neither replaces the other, and offline verification
+always works regardless of which layer you use.
 
 ```bash
 npm install
-node sovereign.js          # sovereign mode — no vault, no key, no network
+node sovereign.js          # works immediately — no account, no key, no network
 # — or —
-node bot.js                # custody mode — mint through the vault API
-node verifier.js           # custody mode — verify through the vault API
+node bot.js                # portal-governed — mint through the hosted API
+node verifier.js           # portal-governed — verify through the hosted API
 ```
 
 ---
 
 ## Sovereign mode (`sovereign.js`)
 
-Pure decentralised authority. Runs entirely offline:
+Pure offline authority. No account, no API key, no server, no issuer.
 
 ```
 root → domain → action envelope → capability → sign → verify
 ```
 
-No vault, no API key, no server, no issuer, no revocation list. The holder of
-the root is the only authority. `sovereign.js` generates an ephemeral root,
-derives a scoped capability with `deriveAgentActionCapability`, signs an action
-with `signAction`, and verifies it with `verifyAction` — proving, and then
-rejecting, a tampered action. Everything comes from the published SDK; nothing
-touches the network.
+`sovereign.js` generates an ephemeral root, derives a scoped capability with
+`deriveAgentActionCapability`, signs an action with `signAction`, and verifies it
+with `verifyAction` — proving, and then rejecting, a tampered action. Everything
+comes from the published SDK; nothing touches the network.
 
 ---
 
-## Custody mode
+## Portal-governed mode (`bot.js` + `verifier.js`)
 
-A **vault-anchored** surface for governed, auditable authority.
+A bot that proves membership by signature and mints scoped action capabilities
+through the hosted API. The bot holds **no vault root, no passphrase, and no
+domain seed** — only its own identity key and a MintDelegate the portal issued.
 
-Authority is anchored to an authenticated vault, not to a local seed. This part
-holds **no passphrase, no vault file, no local root, and no local encryption**.
-The only credential it carries is a vault-issued **API key**, and every hosted
-call is gated by it.
+The portal (browser console at [agentenvelope.io](https://agentenvelope.io)) is
+where you create the vault, derive domains, issue MintDelegates, register public
+records, and manage API keys. The vault root is browser-held and never sent to
+any server. The portal is the governance surface; the SDK is the crypto surface.
 
-> Custody mode replaces the earlier browser-held-vault prototype. There is no
-> `VAULT_PASSPHRASE`, no `vault.json`, and no client-side root derivation.
+### Setup — step by step
 
-## The custody model
-
-| Where authority lives | What the SDK holds |
-|---|---|
-| Vault root — server-side, encrypted under the authenticated user | Nothing |
-| Domain keys — derived **inside** the vault | Nothing |
-| Bot registration — inside the vault | An `AE_BOT_ID` reference |
-| Mint delegate — signed inside the vault | A `mint-delegate.json` export (no secrets) |
-| API key — issued by the vault | `AE_API_KEY` (gates every call) |
-
-The cryptographic core stays deterministic — the same inputs produce the same
-addresses — but the **authority** is anchored to the vault, and the API key is
-what proves you are allowed to exercise it.
-
-## Configuration
-
-Copy `.env.example` to `.env.local` and fill in the values from the console:
-
-| Variable | Meaning |
-|---|---|
-| `AE_API_KEY` | Vault-issued API key — gates every hosted call |
-| `AE_VAULT_ID` | The authenticated vault this bot belongs to |
-| `AE_DOMAIN_ID` | The domain inside the vault |
-| `AE_BOT_ID` | The registered bot identity (agent id) |
-| `AE_BOT_KEY` | The bot's **own** identity signing key (`0x` hex) — not the vault root |
-| `AE_MINT_MATERIAL` | *(optional)* 32-byte mint material (`0x` hex) issued out-of-band by the Avatar owner — enables local action-capability derivation |
-
-`AE_BOT_KEY` is the bot's private key, used only to sign its own `MintRequest`.
-It is never the vault root and never leaves this process — the hosted API only
-ever receives the resulting signature.
-
-## What happens in the console first
-
-These steps require the authenticated console (Cognito) and produce the
-artifacts this example consumes:
-
-1. Authenticate and create a vault. The vault root is stored server-side,
-   encrypted under your account.
-2. Create a domain inside the vault (`AE_DOMAIN_ID`).
-3. Register your bot (`AE_BOT_ID`) — the vault records the bot's public address.
-4. Issue a **MintDelegate** for the bot and export it as `mint-delegate.json`.
-5. Obtain your **API key** (`AE_API_KEY`).
-6. *(Optional)* Issue the bot's **mint material** (`AE_MINT_MATERIAL`) out-of-band
-   so it can derive its action capability locally after a valid receipt.
-
-## Run
+**Step 1 — install and generate a bot key**
 
 ```bash
 npm install
-cp .env.example .env.local   # then fill in the values
-node bot.js                  # mint through the vault API
-node verifier.js             # verify authority through the vault API
+cp .env.example .env.local
+```
+
+Add your portal API key to `.env.local` (`AE_API_KEY`), then run:
+
+```bash
+npm run portal:setup
+```
+
+This checks the API key reaches the hosted API and generates `AE_BOT_KEY`
+locally if it is missing. It prints the bot's **public address** — copy it, you
+will need it in the portal. The private key stays in `.env.local` and is never
+printed.
+
+**Step 2 — portal: vault and domain** *(one-time)*
+
+1. Sign up at [agentenvelope.io/signup](https://agentenvelope.io/signup). Free
+   tier provisions immediately.
+2. On **Vault**: create a vault with a strong passphrase. The root is generated
+   in your browser and never leaves it.
+3. On **Vault**: create a domain — namespace, domain id, and kind.
+4. On **Account → API keys**: rotate and copy your API key once. Store it in
+   your secrets manager; it is shown only once.
+
+**Step 3 — portal: configure a delegate on Agents**
+
+1. On **Agents**: select the domain you created.
+2. Click **Configure delegate** and fill in the bounds:
+   - Allowed operations (e.g. `send-message`)
+   - Allowed resources (e.g. `thread:*`)
+   - Max mints, max uses per action, action index range, expiry
+3. Enter your vault passphrase and click **Issue**.
+4. From the issued delegate panel, copy:
+   - `AE_DELEGATE_ID` — the active delegate id
+   - `AE_MINT_MATERIAL` — the one-time mint material (enables local signing)
+   - Optionally save the delegate JSON as `mint-delegate.json` for a local fallback
+
+**Step 4 — set the remaining env values**
+
+| Variable | Where it comes from |
+|---|---|
+| `AE_API_KEY` | Account → API keys in the portal |
+| `AE_BOT_ID` | The `agentId` you want this bot to mint for (e.g. `support-sender`) — must match the agent id in the delegate's allowed scope |
+| `AE_DELEGATE_ID` | Active Delegates row on the Agents page |
+| `AE_BOT_KEY` | Generated locally by `portal:setup` — do not change it |
+| `AE_MINT_MATERIAL` | Copied from the issued delegate panel — enables local capability derivation |
+
+**Step 5 — run**
+
+```bash
+node bot.js       # mint → derive → sign → verify
+node verifier.js  # look up the public record and verify the signed action
 ```
 
 Or both in sequence:
@@ -119,71 +126,53 @@ Or both in sequence:
 npm run demo
 ```
 
-## What each script does
+### What each script does
 
-### bot.js
+**`bot.js`** — fetches the active delegate by `AE_DELEGATE_ID` (or falls back to
+`mint-delegate.json`), verifies it locally, signs a `MintRequest` with its own
+key (`AE_BOT_KEY`), and mints through `POST /sovereign/mint` (API-key gated).
+The hosted API verifies both signatures and every policy constraint, then returns
+a signed receipt. With `AE_MINT_MATERIAL` set, the bot then derives its action
+capability locally, signs an action, and verifies it offline — no signing
+material ever leaves the bot.
 
-The registered bot. It loads the vault-issued `mint-delegate.json`, verifies it
-locally, then signs a `MintRequest` with its **own** key (`AE_BOT_KEY`) and mints
-through `POST /sovereign/mint` (API-key gated). The vault verifies both
-signatures and every policy bound server-side and returns a signed receipt.
+**`verifier.js`** — holds only the API key. Looks up the bot's registered public
+record via the hosted API, and — if a `signed-payload.json` is present —
+verifies the signed action through `POST /sovereign/verify`. Offline
+verification against the same public record is always available via the SDK
+without any API call.
 
-The bot never sees the vault root, a passphrase, or any domain seed. It proves
-membership by signature and is authorised by the vault.
-
-> With `AE_MINT_MATERIAL` set (issued out-of-band by the Avatar owner), the bot
-> then derives its action capability locally with `mintActionCapability` from
-> `agent-envelope-sdk`, signs an action, and verifies it — no signing material
-> ever leaves the bot. Without it, the example stops at the vault receipt.
-
-### verifier.js
-
-Holds only the API key. It looks up the bot's registered public record via the
-API, and — if a `signed-payload.json` is present — verifies the signed action
-through `POST /sovereign/verify` (API-key gated). There is no offline fallback:
-the vault is the source of truth.
-
-## What this process never holds
-
-- No vault passphrase
-- No vault root
-- No local vault file
-- No local encryption or unwrapping
-- No domain seed
-
-Authority is fetched, minted, and verified through the vault API, gated by the
-vault-issued API key.
+**`portal-setup.js`** — checks `AE_API_KEY` reaches the hosted API, generates
+`AE_BOT_KEY` locally if missing, and prints the bot's public address. Run this
+before configuring a delegate in the portal.
 
 ---
 
 ## MCP server (`mcp-server.js`)
 
-The neutral authority layer for agent runtimes. `mcp-server.js` speaks the
-[Model Context Protocol](https://modelcontextprotocol.io) over stdio, so **any**
-MCP client — Claude, an OpenAI agent, LangChain, CrewAI, a custom runtime — can
-call AgentEnvelope to check and issue authority without building its own policy
-engine, audit log, or verification stack. AgentEnvelope is owned by no framework,
-so every framework can embed it.
+`mcp-server.js` speaks the [Model Context Protocol](https://modelcontextprotocol.io)
+over stdio. Any MCP client — Claude, an OpenAI agent, LangChain, CrewAI, a
+custom runtime — can call AgentEnvelope to check and issue authority without
+building its own policy engine, audit log, or verification stack.
 
 ```bash
 node mcp-server.js        # speaks MCP over stdio
 ```
 
-It exposes four tools across the two modes:
+Four tools across the two layers:
 
-| Tool | Mode | Credential |
+| Tool | Layer | Credential |
 |---|---|---|
 | `ae_verify_sovereign` | Sovereign | none — offline, always free |
-| `ae_get_agent` | Custody | `AE_API_KEY` |
-| `ae_verify_action` | Custody | `AE_API_KEY` |
-| `ae_mint` | Custody | `AE_API_KEY` |
+| `ae_get_agent` | Portal-governed | `AE_API_KEY` |
+| `ae_verify_action` | Portal-governed | `AE_API_KEY` |
+| `ae_mint` | Portal-governed | `AE_API_KEY` |
 
-`ae_verify_sovereign` needs no vault and no key — verification is always free.
-The vault-gated tools are the governed surface a framework offloads rather than
-rebuilds.
+`ae_verify_sovereign` needs no account and no key — sovereign verification is
+always free. The portal-governed tools are the surface a framework offloads
+rather than rebuilds.
 
-To use it from an MCP client, point the client at this command and pass the
-vault-issued key in the environment:
+To use it from an MCP client:
 
 ```jsonc
 {
@@ -191,11 +180,36 @@ vault-issued key in the environment:
     "agent-envelope": {
       "command": "node",
       "args": ["mcp-server.js"],
-      "env": { "AE_API_KEY": "your-vault-issued-key" }
+      "env": { "AE_API_KEY": "your-portal-issued-key" }
     }
   }
 }
 ```
+
+---
+
+## Tests
+
+The example uses Node's built-in test runner, so no test framework dependency is
+needed.
+
+```bash
+npm test
+```
+
+Current coverage:
+
+| Suite | What it proves |
+|---|---|
+| Sovereign flow | Domain derivation, capability derivation, sign/verify, tamper rejection, full `sovereign.js` mirror |
+| Canonical signing | Stable canonical JSON, stable content hashes, reordered object verification |
+| Public record verification | Seedless public records, valid hosted-style verification, hash/index/status/time-window rejection |
+| Portal-governed local layer | MintDelegate and MintRequest verification, address-set bots, wildcard/exact resources, policy bounds, full `bot.js` local mirror |
+| `deriveMintMaterial` | Shape, determinism, domain isolation, root isolation |
+| Hosted client route contracts | API-key headers and request bodies for lookup, verify, and mint without making network calls |
+| Receipt attestations | Hosted receipt signing, attester pinning, tamper rejection |
+| Cross-prefix isolation | Delegate signatures cannot pass as action signatures and vice versa |
+| Custody boundary | Private capability material stays private, public projections stay seedless, consumed seeds are zeroed |
 
 ---
 
