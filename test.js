@@ -40,7 +40,10 @@ import {
   buildActionEnvelope,
   deriveAgentActionCapability,
   createPublicActionRecord,
+  serializeAgentActionCapability,
+  serializePublicActionRecord,
 } from "agent-envelope-sdk/avatar";
+import { DECAY_MODES } from "agent-envelope-sdk/constants";
 import { getAgentRecord, getStoredDelegate, mint, verifyAction as hostedVerifyAction } from "./hosted.js";
 
 // ─── Fixtures ────────────────────────────────────────────────────────────────
@@ -994,5 +997,39 @@ describe("custody boundary", () => {
     const material = freshMintMaterial();
     mintActionCapability(material, delegate, request);
     assert.equal(Buffer.from(material).equals(Buffer.alloc(32)), true);
+  });
+});
+
+// ─── Serialization and constants ─────────────────────────────────────────────
+
+describe("serialization and constants", () => {
+  it("DECAY_MODES contains all four modes", () => {
+    assert.equal(DECAY_MODES.NONE, "NONE");
+    assert.equal(DECAY_MODES.TIME, "TIME");
+    assert.equal(DECAY_MODES.ACTION, "ACTION");
+    assert.equal(DECAY_MODES.BOTH, "BOTH");
+    assert.equal(Object.keys(DECAY_MODES).length, 4);
+  });
+
+  it("DECAY_MODES is frozen", () => {
+    assert.ok(Object.isFrozen(DECAY_MODES));
+  });
+
+  it("serializeAgentActionCapability returns valid JSON with actionSeedHex", () => {
+    const { capability } = makeCapability();
+    const serialized = serializeAgentActionCapability(capability);
+    const parsed = JSON.parse(serialized);
+    assert.equal(parsed.type, "agentenvelope.agentCapability");
+    assert.ok("actionSeedHex" in parsed);
+    assert.equal(parsed.actionSeedHex, capability.actionSeedHex);
+  });
+
+  it("serializePublicActionRecord returns valid JSON without actionSeedHex", () => {
+    const { record, capability } = makePublicRecordFixture();
+    const serialized = serializePublicActionRecord(record);
+    const parsed = JSON.parse(serialized);
+    assert.equal(parsed.type, "agentenvelope.publicActionRecord");
+    assert.ok(!("actionSeedHex" in parsed));
+    assert.ok(!serialized.toLowerCase().includes(capability.actionSeedHex.toLowerCase()));
   });
 });

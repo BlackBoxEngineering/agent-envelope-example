@@ -8,8 +8,7 @@ showing the two layers of the product.
 The sovereign crypto layer is **free, offline, and requires no account**. The
 hosted governance layer is **optional, but it is the product layer you usually
 want in production**: it adds API-keyed operation control, public records, mint
-receipts, verification events, and audit trails on top of the same deterministic
-core.
+receipts, verification events, and audit trails on top of the same deterministic core.
 
 | | Sovereign | Portal-governed |
 |---|---|---|
@@ -21,8 +20,8 @@ core.
 | Example | `sovereign.js` | `bot.js` + `verifier.js` |
 
 Sovereign mode is the free, unstoppable substrate. Portal governance is the
-optional layer on top — neither replaces the other, and offline verification
-always works regardless of which layer you use.
+optional layer on top and neither replaces the other. Offline verification
+always works regardless of which layer is used.
 
 ```bash
 npm install
@@ -31,13 +30,10 @@ node sovereign.js          # works immediately — no account, no key, no networ
 node bot.js                # portal-governed — mint through the hosted API
 node verifier.js           # portal-governed — verify through the hosted API
 ```
-
 ---
 
 ## Sovereign mode (`sovereign.js`)
-
 Pure offline authority. No account, no API key, no server, no issuer.
-
 ```
 root → domain → action envelope → capability → sign → verify
 ```
@@ -210,6 +206,7 @@ Current coverage:
 | Receipt attestations | Hosted receipt signing, attester pinning, tamper rejection |
 | Cross-prefix isolation | Delegate signatures cannot pass as action signatures and vice versa |
 | Custody boundary | Private capability material stays private, public projections stay seedless, consumed seeds are zeroed |
+| Serialization and constants | `DECAY_MODES` enum, `serializeAgentActionCapability`, `serializePublicActionRecord` |
 
 ---
 
