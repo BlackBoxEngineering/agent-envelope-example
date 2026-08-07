@@ -171,15 +171,20 @@ does not replace sandbox hygiene.
 
 ---
 
-## MCP server (`mcp-server.js`)
+## MCP server (`agent-envelope-mcp`)
 
-`mcp-server.js` speaks the [Model Context Protocol](https://modelcontextprotocol.io)
+The example consumes the published [`agent-envelope-mcp`](https://www.npmjs.com/package/agent-envelope-mcp)
+package. `mcp-server.js` is only a tiny wrapper that loads `.env.local` and starts
+that package over stdio.
+
+`agent-envelope-mcp` speaks the [Model Context Protocol](https://modelcontextprotocol.io)
 over stdio. Any MCP client — Claude, an OpenAI agent, LangChain, CrewAI, a
 custom runtime — can call AgentEnvelope to check and issue authority without
 building its own policy engine, audit log, or verification stack.
 
 ```bash
-node mcp-server.js        # speaks MCP over stdio
+npm run mcp        # local wrapper, loads .env.local
+npx agent-envelope-mcp
 ```
 
 Four tools across the two layers:
@@ -203,6 +208,20 @@ To use it from an MCP client:
     "agent-envelope": {
       "command": "node",
       "args": ["mcp-server.js"],
+      "env": { "AE_API_KEY": "your-portal-issued-key" }
+    }
+  }
+}
+```
+
+Or point the client at the published package directly:
+
+```jsonc
+{
+  "mcpServers": {
+    "agent-envelope": {
+      "command": "npx",
+      "args": ["-y", "agent-envelope-mcp"],
       "env": { "AE_API_KEY": "your-portal-issued-key" }
     }
   }
