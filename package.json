@@ -11,6 +11,7 @@
     "preflight": "node preflight.js",
     "bot": "node preflight.js && node bot.js",
     "verifier": "node verifier.js",
+    "escape:incidents": "node escape-incidents.js",
     "demo": "node preflight.js && node bot.js && node verifier.js",
     "mcp": "node mcp-server.js"
   },

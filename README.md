@@ -144,6 +144,33 @@ before configuring a delegate in the portal.
 
 ---
 
+## Escape incident demo (`escape-incidents.js`)
+
+This workspace also contains `../agent-escape-incidents`, a third-party register
+of disclosed agent escape techniques. `escape-incidents.js` uses that register's
+TTP ids as labels and demonstrates AgentEnvelope as an approval-gateway layer:
+
+```bash
+npm run escape:incidents
+```
+
+The demo publishes a small set of action envelopes for a sealed cyber eval:
+`http:get` to the declared lab target, `artifact:read` for workdir artefacts,
+`workspace:write` inside the workdir, and `tool:execute` inside the sealed range.
+Representative incident attempts such as off-range target substitution (`D01`),
+answer-store reads (`A07`), package publication (`B01`), phishing (`C04`), public
+credential publication (`F01`), reverse tunnels (`E01`), and force-push history
+rewrites (`G01`) are refused because no matching operation/resource envelope
+exists.
+
+One row, `E14/Z04`, is deliberately marked `network-layer`: if egress happens
+inside a library or subprocess and no destination-bearing request reaches the
+approval seam, AgentEnvelope must be paired with network isolation or a watchdog.
+That boundary is the honest story: AgentEnvelope fixes authority ambiguity; it
+does not replace sandbox hygiene.
+
+---
+
 ## MCP server (`mcp-server.js`)
 
 `mcp-server.js` speaks the [Model Context Protocol](https://modelcontextprotocol.io)
