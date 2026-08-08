@@ -3,6 +3,11 @@
 Integration examples for [`agent-envelope-sdk`](https://www.npmjs.com/package/agent-envelope-sdk),
 showing the two layers of the product.
 
+AgentEnvelope is not only an AI-agent demo. In these examples, an "agent" is a
+bounded action identity: a named actor, operation, resources, decay policy, and
+verifiable address. That actor can be a chatbot, backend worker, workflow step,
+hotel key, device command, drone dispatch, or any other system trusted to act.
+
 ## Two layers, one substrate
 
 The sovereign crypto layer is **free, offline, and requires no account**. The
@@ -26,6 +31,7 @@ always works regardless of which layer is used.
 ```bash
 npm install
 node sovereign.js          # works immediately — no account, no key, no network
+node use-cases.js          # offline examples beyond AI: support, access, fleet
 # — or —
 node bot.js                # portal-governed — mint through the hosted API
 node verifier.js           # portal-governed — verify through the hosted API
@@ -42,6 +48,25 @@ root → domain → action envelope → capability → sign → verify
 `deriveAgentActionCapability`, signs an action with `signAction`, and verifies it
 with `verifyAction` — proving, and then rejecting, a tampered action. Everything
 comes from the published SDK; nothing touches the network.
+
+---
+
+## Use-case scope (`use-cases.js`)
+
+Same primitive, different actors. This script runs offline and derives scoped
+capabilities for:
+
+- `support-sender` performing `send-message`
+- `room-407-key` performing `unlock-door`
+- `drone-dispatch` performing `dispatch-flight`
+
+Each example produces an agent address, signs a matching action, and verifies it
+locally. This is the broader point: AI agents triggered the design, but the
+primitive secures any bounded actor.
+
+```bash
+npm run use:cases
+```
 
 ---
 

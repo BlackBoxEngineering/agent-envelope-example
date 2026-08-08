@@ -3,10 +3,11 @@
   "version": "2.0.0",
   "license": "Apache-2.0",
   "type": "module",
-  "description": "Integration examples for agent-envelope-sdk: sovereign offline flow (no account, no key, no network) and portal-governed flow (mint delegate, hosted verify, MCP server).",
+  "description": "Integration examples for AgentEnvelope: sovereign offline authority for action-performing systems, portal-governed mint/verify, and MCP tooling.",
   "scripts": {
     "test": "node --test test.js",
     "sovereign": "node sovereign.js",
+    "use:cases": "node use-cases.js",
     "portal:setup": "node portal-setup.js",
     "preflight": "node preflight.js",
     "bot": "node preflight.js && node bot.js",
