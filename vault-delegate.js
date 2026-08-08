@@ -15,6 +15,8 @@
  */
 
 import { randomBytes } from "node:crypto";
+import { hkdf } from "@noble/hashes/hkdf";
+import { sha256 } from "@noble/hashes/sha256";
 import {
   seedAddress,
   buildMintDelegate,
@@ -23,6 +25,7 @@ import {
   verifyMintRequest,
   mintActionCapability,
   deriveMintMaterial,
+  canonicalJSON,
   signAction,
   verifyAction,
   hexToBytes,
@@ -64,25 +67,12 @@ try {
 
   const mintMaterial = deriveMintMaterial(vaultRoot, domain);
 
-  // We need the raw domain seed to sign the delegate. Re-derive it here.
-  // (In the portal this step happens inside the browser vault.)
-  import { hkdf } from "@noble/hashes/hkdf";   // not available — use SDK path
-  // The SDK does not export the raw domain seed derivation, so we use
-  // buildMintDelegate with a domain seed we derive via the avatar module.
-  // projectDomainKey zeroes the domain seed internally, so we derive it
-  // separately using the same HKDF path the SDK uses internally.
-  //
-  // Since the SDK does not export _deriveDomainSeed, we pass the vault root
-  // directly to buildMintDelegate via a thin shim: derive the domain seed
-  // ourselves using the same inputs the SDK uses.
-
   // ── Derive domain seed (mirrors avatar.js _deriveDomainSeed) ──────────────
-  import { hkdf as _hkdf } from "@noble/hashes/hkdf";
-  import { sha256 } from "@noble/hashes/sha256";
-  import { canonicalJSON } from "agent-envelope-sdk";
-
+  // projectDomainKey zeroes the domain seed internally, so we re-derive it
+  // here using the same HKDF path the SDK uses. The vault root never leaves
+  // this process.
   const SALT = new TextEncoder().encode("agentenvelope-v1");
-  const domainSeed = _hkdf(
+  const domainSeed = hkdf(
     sha256,
     vaultRoot,
     SALT,

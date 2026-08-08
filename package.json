@@ -8,6 +8,7 @@
     "test": "node --test test.js",
     "sovereign": "node sovereign.js",
     "use:cases": "node use-cases.js",
+    "vault:delegate": "node vault-delegate.js",
     "portal:setup": "node portal-setup.js",
     "preflight": "node preflight.js",
     "bot": "node preflight.js && node bot.js",
