@@ -717,9 +717,9 @@ async function runDemo() {
   console.log('   │ The hosted API verified delegate + bot + policy bounds.    │')
   console.log('   │ Receipts prove the mint was valid at that moment.          │')
   if (bot.generatedRecords.length > 0) {
-    console.log('   │ Seedless public record manifests were generated locally.  │')
-    console.log('   │ Registration is intentionally portal/account governed.    │')
-    console.log('   │ Hosted record verification waits until records are live.  │')
+    console.log('   │ Seedless public record manifests were generated locally.   │')
+    console.log('   │ Registration is intentionally portal/account governed.     │')
+    console.log('   │ Hosted record verification waits until records are live.   │')
   } else if (bot.canRegisterRecords()) {
     console.log('   │ Domain metadata was available, but no records were        │')
     console.log('   │ generated because no hosted mint completed successfully.  │')

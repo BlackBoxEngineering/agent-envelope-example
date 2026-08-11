@@ -194,6 +194,10 @@ This hosted script requires `AE_API_KEY`, `AE_BOT_ID`, `AE_DELEGATE_ID`,
 `domainSummary`, the script also writes seedless public record manifests to
 `hosted-records.json`.
 
+A recorded happy-path and exhausted-delegate transcript is available in
+[`HOSTED_MULTI_AGENT_TRANSCRIPT.md`](./HOSTED_MULTI_AGENT_TRANSCRIPT.md) for
+readers without portal access.
+
 Hosted mint uses API-key authentication because authority is derived from the
 delegate and bot signatures. Record registration remains account-owned and
 requires Cognito authentication. The hosted example demonstrates mint receipts;
