@@ -80,6 +80,8 @@ The portal (browser console at [agentenvelope.io](https://agentenvelope.io)) is
 where you create the vault, derive domains, issue MintDelegates, register public
 records, and manage API keys. The vault root is browser-held and never sent to
 any server. The portal is the governance surface; the SDK is the crypto surface.
+The hosted governance layer is available at [agentenvelope.io](https://agentenvelope.io) -
+no separate "portal" button exists.
 
 ### Setup — step by step
 
@@ -129,7 +131,7 @@ printed.
 | Variable | Where it comes from |
 |---|---|
 | `AE_API_KEY` | Account → API keys in the portal |
-| `AE_BOT_ID` | The `agentId` you want this bot to mint for (e.g. `support-sender`) — must match the agent id in the delegate's allowed scope |
+| `AE_BOT_ID` | Stable public agent id label (e.g. `support-agent` or `support-sender`) — not the bot key/address |
 | `AE_DELEGATE_ID` | Active Delegates row on the Agents page |
 | `AE_BOT_KEY` | Generated locally by `portal:setup` — do not change it |
 | `AE_MINT_MATERIAL` | Copied from the issued delegate panel — enables local capability derivation |
@@ -169,11 +171,70 @@ before configuring a delegate in the portal.
 
 ---
 
+## LLM tool workflows (`multi-agent.js` + `hosted-multi-agent.js`)
+
+`multi-agent.js` runs the three-bot support workflow locally with sovereign
+delegates. It requires AWS Bedrock credentials for the LLM loop, but no
+AgentEnvelope account or hosted API key.
+
+```bash
+npm run multi:agent
+```
+
+`hosted-multi-agent.js` runs the same support workflow through hosted minting
+and verification. It uses one portal-issued delegate for the tool calls; for
+strict three-bot separation, issue one hosted delegate per bot address.
+
+```bash
+npm run hosted:multi
+```
+
+This hosted script requires `AE_API_KEY`, `AE_BOT_ID`, `AE_DELEGATE_ID`,
+`AE_BOT_KEY`, and `AE_MINT_MATERIAL`. If `mint-delegate.json` includes
+`domainSummary`, the script also writes seedless public record manifests to
+`hosted-records.json`.
+
+Hosted mint uses API-key authentication because authority is derived from the
+delegate and bot signatures. Record registration remains account-owned and
+requires Cognito authentication. The hosted example demonstrates mint receipts;
+record-backed hosted verification works once the record is registered via the
+portal.
+
+### Portal tests with no ambiguity
+
+Use the portal for account-governed tests, not as an API-key publishing shortcut:
+
+1. Go to [agentenvelope.io](https://agentenvelope.io) and sign in.
+2. On **Vault**, create or unlock your vault, then create the domain used by the
+   test.
+3. On **Agents**, select that domain and configure a delegate. For
+   `npm run hosted:multi`, use operations `read-thread`, `send-message`, and
+   `issue-refund`; use resource `*` or matching `thread:*` / `order:*` bounds;
+   set `maxMints` high enough for the run.
+4. Copy the delegate id, mint material, and delegate JSON. Save the JSON as
+   `mint-delegate.json` beside the example so the script can read
+   `domainSummary`.
+5. Run `npm run hosted:multi`. The script mints through the hosted API and, when
+   `domainSummary` is present, writes `hosted-records.json` with seedless public
+   record manifests.
+6. Record registration is still an owner-account action. The current portal
+   supports publishing records it creates from the signed-in workspace on
+   **Records** and **Records → Playground**; it does not treat a bot API key as
+   permission to publish records under your identity.
+7. After the matching public record is registered by the portal/account owner,
+   hosted verification can check the signed payload with `POST /sovereign/verify`.
+
+---
+
 ## Escape incident demo (`escape-incidents.js`)
 
 This workspace also contains `../agent-escape-incidents`, a third-party register
 of disclosed agent escape techniques. `escape-incidents.js` uses that register's
 TTP ids as labels and demonstrates AgentEnvelope as an approval-gateway layer:
+
+Note: `npm run escape:incidents` requires a vault-derived TTP register from
+[agentenvelope.io](https://agentenvelope.io). This part is not reproducible cold
+from GitHub. The sovereign and portal-governed examples are fully public.
 
 ```bash
 npm run escape:incidents

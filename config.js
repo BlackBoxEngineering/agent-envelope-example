@@ -38,8 +38,9 @@ export const config = {
   botId: () => requireEnv("AE_BOT_ID", "the agent id registered in the portal"),
   delegateId: () => process.env.AE_DELEGATE_ID?.trim() || null,
   // The bot’s OWN identity signing key — this is the bot’s private key, not the
-  // vault root. The portal registered its address as AE_BOT_ID. The bot must hold
-  // its own key to sign a MintRequest; the hosted API never receives it.
+  // vault root. The bot address is derived from AE_BOT_KEY and may be bound in
+  // the portal delegate policy. AE_BOT_ID is the public agent id label used in
+  // mint requests and hosted record lookup.
   botKey: () =>
     requireEnv(
       "AE_BOT_KEY",

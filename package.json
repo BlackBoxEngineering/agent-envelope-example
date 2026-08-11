@@ -18,7 +18,8 @@
     "mcp": "node mcp-server.js",
     "llm:drift": "node llm-drift.js",
     "llm:drift:portal": "node llm-drift.js --portal",
-    "multi:agent": "node multi-agent.js"
+    "multi:agent": "node multi-agent.js",
+    "hosted:multi": "node hosted-multi-agent.js"
   },
   "dependencies": {
     "@aws-sdk/client-bedrock-runtime": "^3.1106.0",
