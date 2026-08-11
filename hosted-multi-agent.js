@@ -720,6 +720,10 @@ async function runDemo() {
     console.log('   │ Seedless public record manifests were generated locally.  │')
     console.log('   │ Registration is intentionally portal/account governed.    │')
     console.log('   │ Hosted record verification waits until records are live.  │')
+  } else if (bot.canRegisterRecords()) {
+    console.log('   │ Domain metadata was available, but no records were        │')
+    console.log('   │ generated because no hosted mint completed successfully.  │')
+    console.log('   │ Check blocked tool reasons above, such as mint limits.    │')
   } else {
     console.log('   │ No public records were registered because domainSummary    │')
     console.log('   │ metadata was not available to this local script.           │')
