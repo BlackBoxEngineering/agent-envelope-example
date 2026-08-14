@@ -732,4 +732,7 @@ async function runDemo() {
   console.log()
 }
 
-runDemo().catch(console.error)
+runDemo().catch(err => {
+  console.error(err)
+  process.exit(1)
+})
