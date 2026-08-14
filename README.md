@@ -171,7 +171,7 @@ before configuring a delegate in the portal.
 
 ---
 
-## LLM tool workflows (`multi-agent.js` + `hosted-multi-agent.js`)
+## LLM tool workflows
 
 `multi-agent.js` runs the three-bot support workflow locally with sovereign
 delegates. It requires AWS Bedrock credentials for the LLM loop, but no
@@ -181,18 +181,27 @@ AgentEnvelope account or hosted API key.
 npm run multi:agent
 ```
 
-`hosted-multi-agent.js` runs the same support workflow through hosted minting
-and verification. It uses one portal-issued delegate for the tool calls; for
-strict three-bot separation, issue one hosted delegate per bot address.
+The hosted LLM examples all use the same basic pattern: the model can request
+tools, but the bot can only mint and execute operations covered by the active
+portal-issued delegate.
 
-```bash
-npm run hosted:multi
-```
+| Command | Script | What it shows |
+|---|---|---|
+| `npm run hosted:multi` | `hosted-multi-agent.js` | A normal support workflow routed through hosted minting and receipt checks |
+| `npm run hosted:escalation` | `hosted-escalation.js` | Explicit escalation pressure: case escalation, refund override, customer export, and audit-note deletion attempts are refused unless delegated |
+| `npm run hosted:overreach` | `hosted-overreach.js` | Natural overreach: a helpful support bot tries to do shipping, credit, fee-waiver, and ticket-control work beyond routine support authority |
 
-This hosted script requires `AE_API_KEY`, `AE_BOT_ID`, `AE_DELEGATE_ID`,
-`AE_BOT_KEY`, and `AE_MINT_MATERIAL`. If `mint-delegate.json` includes
-`domainSummary`, the script also writes seedless public record manifests to
-`hosted-records.json`.
+`hosted-multi-agent.js` can also generate seedless public record manifests in
+`hosted-records.json` when `mint-delegate.json` includes `domainSummary`.
+
+These hosted scripts require `AE_API_KEY`, `AE_BOT_ID`, `AE_DELEGATE_ID`,
+`AE_BOT_KEY`, and `AE_MINT_MATERIAL`. They use AWS Bedrock for the LLM loop via
+`BEDROCK_MODEL_ID` and `AWS_REGION`.
+
+These are demonstration workflows, not independent adversarial evaluations.
+They are useful for showing the boundary: model intent and tool descriptions can
+drift, but minting remains constrained by delegate operations, resources, time
+windows, and hosted policy checks.
 
 A recorded happy-path and exhausted-delegate transcript is available in
 [`HOSTED_MULTI_AGENT_TRANSCRIPT.md`](./HOSTED_MULTI_AGENT_TRANSCRIPT.md) for
@@ -215,12 +224,19 @@ Use the portal for account-governed tests, not as an API-key publishing shortcut
    `npm run hosted:multi`, use operations `read-thread`, `send-message`, and
    `issue-refund`; use resource `*` or matching `thread:*` / `order:*` bounds;
    set `maxMints` high enough for the run.
+   For `npm run hosted:overreach`, the same three routine support operations
+   make the contrast clear: shipping changes, store credit, fee waivers, and
+   ticket closure should be absent from the delegate so those helpful-but-broader
+   actions are blocked.
+   For `npm run hosted:escalation`, leave operations such as `case-escalate`,
+   `refund-override`, `customer-data-export`, and `audit-note-delete` out of the
+   delegate unless you intentionally want to test an allowed escalation path.
 4. Copy the delegate id, mint material, and delegate JSON. Save the JSON as
    `mint-delegate.json` beside the example so the script can read
    `domainSummary`.
-5. Run `npm run hosted:multi`. The script mints through the hosted API and, when
-   `domainSummary` is present, writes `hosted-records.json` with seedless public
-   record manifests.
+5. Run one of the hosted commands above. The scripts mint through the hosted API;
+   `hosted-multi-agent.js` writes `hosted-records.json` with seedless public
+   record manifests when `domainSummary` is present.
 6. Record registration is still an owner-account action. The current portal
    supports publishing records it creates from the signed-in workspace on
    **Records** and **Records → Playground**; it does not treat a bot API key as
