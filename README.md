@@ -285,26 +285,30 @@ that package over stdio.
 
 `agent-envelope-mcp` speaks the [Model Context Protocol](https://modelcontextprotocol.io)
 over stdio. Any MCP client — Claude, an OpenAI agent, LangChain, CrewAI, a
-custom runtime — can call AgentEnvelope to check and issue authority without
-building its own policy engine, audit log, or verification stack.
+custom runtime — can call AgentEnvelope to check delegated authority without
+building its own verification stack.
 
 ```bash
 npm run mcp        # local wrapper, loads .env.local
 npx agent-envelope-mcp
 ```
 
-Four tools across the two layers:
+Five tools across the two layers:
 
 | Tool | Layer | Credential |
 |---|---|---|
-| `ae_verify_sovereign` | Sovereign | none — offline, always free |
+| `ae_verify_sovereign` | Sovereign signature check | none — offline, always free |
+| `ae_verify_sovereign_record` | Sovereign public-record check | none — offline, always free |
 | `ae_get_agent` | Portal-governed | `AE_API_KEY` |
 | `ae_verify_action` | Portal-governed | `AE_API_KEY` |
 | `ae_mint` | Portal-governed | `AE_API_KEY` |
 
-`ae_verify_sovereign` needs no account and no key — sovereign verification is
-always free. The portal-governed tools are the surface a framework offloads
-rather than rebuilds.
+`ae_verify_sovereign` is signature-only: it proves that a message was signed by
+the expected address. `ae_verify_sovereign_record` verifies against a public
+action record, including record status, action index, signature/address match,
+optional envelope hash, and time decay. Both need no account and no key. The
+portal-governed tools are the hosted surface a framework offloads rather than
+rebuilds.
 
 To use it from an MCP client:
 
