@@ -6,6 +6,10 @@
  *   - confirm AE_API_KEY reaches the hosted API
  *   - generate AE_BOT_KEY locally if missing
  *   - print the public bot address to paste into the portal delegate policy
+ *
+ * AE_BOT_KEY is local on purpose: it is the runtime bot's private identity key,
+ * not a portal output and not the vault root. The portal issues delegates; the
+ * bot keeps its own signing identity and proves itself with mint requests.
  */
 
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
