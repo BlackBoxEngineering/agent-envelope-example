@@ -128,6 +128,7 @@ class Bot {
       timeWindow: { notBefore: now, notAfter: now + 5 * 60 * 1000 },
       nonce: crypto.randomUUID(),
       requestedAt: new Date().toISOString(),
+      ...(this.delegate.legitimacyRef?.legitimacyId ? { legitimacyId: this.delegate.legitimacyRef.legitimacyId } : {}),
     })
 
     const check = verifyMintRequest(request, this.delegate)

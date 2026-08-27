@@ -338,6 +338,7 @@ class HostedBot {
       timeWindow,
       nonce: crypto.randomUUID(),
       requestedAt: new Date().toISOString(),
+      ...(this.delegate.legitimacyRef?.legitimacyId ? { legitimacyId: this.delegate.legitimacyRef.legitimacyId } : {}),
     })
 
     // 3. Verify request locally

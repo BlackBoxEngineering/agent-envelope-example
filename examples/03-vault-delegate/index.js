@@ -115,6 +115,7 @@ try {
     timeWindow: { notBefore: now, notAfter: now + 60 * 60 * 1000 },
     nonce: "0x" + Buffer.from(randomBytes(32)).toString("hex"),
     requestedAt: new Date().toISOString(),
+    ...(delegate.legitimacyRef?.legitimacyId ? { legitimacyId: delegate.legitimacyRef.legitimacyId } : {}),
   });
   // buildMintRequest zeros botSeed.
 

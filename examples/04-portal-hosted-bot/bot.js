@@ -101,6 +101,7 @@ const request = buildMintRequest(botSeed, delegate, {
   timeWindow: { notBefore: now, notAfter: now + 60 * 60 * 1000 },
   nonce: crypto.randomUUID(),
   requestedAt: new Date().toISOString(),
+  ...(delegate.legitimacyRef?.legitimacyId ? { legitimacyId: delegate.legitimacyRef.legitimacyId } : {}),
 });
 // buildMintRequest zeros botSeed internally.
 

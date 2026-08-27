@@ -278,6 +278,7 @@ class HostedOverreachBot {
       timeWindow: { notBefore: now, notAfter: now + 5 * 60 * 1000 },
       nonce: crypto.randomUUID(),
       requestedAt: new Date().toISOString(),
+      ...(this.delegate.legitimacyRef?.legitimacyId ? { legitimacyId: this.delegate.legitimacyRef.legitimacyId } : {}),
     })
 
     const localCheck = verifyMintRequest(request, this.delegate)
