@@ -17,19 +17,51 @@
  */
 
 import { readFileSync, existsSync } from "node:fs";
-import { config } from "./config.js";
-import { getAgentRecord, verifyAction } from "./hosted.js";
+import { config } from "../../shared/config.js";
+import { getAgentRecord, verifyAction } from "../../shared/hosted.js";
 
 const API_KEY = config.apiKey();
 const BOT_ID = config.botId();
 
+function readJsonFile(path) {
+  return JSON.parse(readFileSync(path, "utf8"));
+}
+
+function pickRecordLookup() {
+  if (existsSync("signed-payload.json")) {
+    const signed = readJsonFile("signed-payload.json");
+    if (typeof signed.agentId === "string" && signed.agentId.length > 0) {
+      return { agentId: signed.agentId, source: "signed-payload.json" };
+    }
+  }
+
+  if (existsSync("hosted-records.json")) {
+    const generated = readJsonFile("hosted-records.json");
+    const records = Array.isArray(generated.records) ? generated.records : [];
+    const actionRecord =
+      records.find(
+        (record) =>
+          record?.type === "agentenvelope.publicActionRecord" &&
+          record?.actionEnvelope?.operation === "read-thread",
+      ) ?? records.find((record) => record?.type === "agentenvelope.publicActionRecord");
+    if (typeof actionRecord?.agentId === "string" && actionRecord.agentId.length > 0) {
+      return { agentId: actionRecord.agentId, source: "hosted-records.json" };
+    }
+  }
+
+  return { agentId: BOT_ID, source: "AE_BOT_ID" };
+}
+
 // ─── 1. Look up the registered record via the API ────────────────────────────
 
-console.log(`Looking up registered record for ${BOT_ID} via the hosted API...`);
-const record = await getAgentRecord(API_KEY, BOT_ID);
+const lookup = pickRecordLookup();
+console.log(`Looking up registered record for ${lookup.agentId} via the hosted API...`);
+console.log(`Lookup source: ${lookup.source}`);
+const lookupResult = await getAgentRecord(API_KEY, lookup.agentId);
+const record = lookupResult?.record ?? lookupResult;
 
-if (!record || record.error) {
-  console.error("\nLookup failed:", record?.error ?? "no record returned");
+if (!record || lookupResult?.error || record.error) {
+  console.error("\nLookup failed:", lookupResult?.error ?? record?.error ?? "no record returned");
   process.exit(1);
 }
 console.log("\n--- Public record ---");
@@ -53,7 +85,7 @@ const { payload, signature, actionIndex, actionEnvelopeHash } = JSON.parse(
 
 console.log("\nVerifying the signed action via the hosted API...");
 const report = await verifyAction(API_KEY, {
-  agentId: BOT_ID,
+  agentId: lookup.agentId,
   actionIndex,
   payload,
   signature,

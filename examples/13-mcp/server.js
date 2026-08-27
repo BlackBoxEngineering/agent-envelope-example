@@ -11,7 +11,7 @@
  *   node mcp-server.js
  */
 
-import "./config.js";
+import "../../shared/config.js";
 import { start } from "agent-envelope-mcp";
 
 await start();

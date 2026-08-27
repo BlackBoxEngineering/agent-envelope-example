@@ -32,8 +32,8 @@ import {
   verifyAction,
   hexToBytes,
 } from "agent-envelope-sdk";
-import { config } from "./config.js";
-import { getStoredDelegate, mint } from "./hosted.js";
+import { config } from "../../shared/config.js";
+import { getStoredDelegate, mint } from "../../shared/hosted.js";
 
 const API_KEY = config.apiKey();
 const BOT_ID = config.botId();

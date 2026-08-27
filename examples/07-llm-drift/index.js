@@ -25,7 +25,7 @@
  */
 
 import { randomBytes } from 'node:crypto'
-import { readFileSync, existsSync } from 'node:fs'
+import { config } from '../../shared/config.js'
 import { hkdf } from '@noble/hashes/hkdf'
 import { sha256 } from '@noble/hashes/sha256'
 import {
@@ -47,28 +47,6 @@ import {
 } from 'agent-envelope-sdk/avatar'
 
 // ─── Config ──────────────────────────────────────────────────────────────────
-
-function loadEnv() {
-  try {
-    if (existsSync('.env.local')) {
-      const content = readFileSync('.env.local', 'utf8')
-      for (const line of content.split('\n')) {
-        const match = line.match(/^([^#=]+)=(.*)$/)
-        if (match) {
-          const key = match[1].trim()
-          let value = match[2].split('#')[0].trim()
-          // Remove surrounding quotes if present
-          if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
-            value = value.slice(1, -1)
-          }
-          if (value && !process.env[key]) process.env[key] = value
-        }
-      }
-    }
-  } catch {}
-}
-
-loadEnv()
 
 const USE_PORTAL = process.argv.includes('--portal')
 
@@ -169,10 +147,10 @@ function setupEphemeralAuthority() {
 // ─── Portal authority (uses your real vault) ─────────────────────────────────
 
 async function setupPortalAuthority() {
-  const API_KEY = process.env.AE_API_KEY
-  const DELEGATE_ID = process.env.AE_DELEGATE_ID
-  const MINT_MATERIAL_HEX = process.env.AE_MINT_MATERIAL
-  const BOT_KEY = process.env.AE_BOT_KEY
+  const API_KEY = config.apiKey()
+  const DELEGATE_ID = config.delegateId()
+  const MINT_MATERIAL_HEX = config.mintMaterial()
+  const BOT_KEY = config.botKey()
 
   if (!API_KEY || !DELEGATE_ID || !MINT_MATERIAL_HEX || !BOT_KEY) {
     console.error('\nPortal mode requires:')
@@ -196,7 +174,8 @@ async function setupPortalAuthority() {
     process.exit(1)
   }
 
-  const delegate = await res.json()
+  const body = await res.json()
+  const delegate = body.delegate ?? body
 
   // Verify delegate locally
   const check = verifyMintDelegate(delegate, delegate.issuerAddress)

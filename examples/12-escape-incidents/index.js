@@ -1,7 +1,7 @@
 /**
  * Agent escape incidents demo.
  *
- * Uses TTP ids from ../agent-escape-incidents/TTP-REGISTER.md to show how an
+ * Uses TTP ids from the sibling agent-escape-incidents repo to show how an
  * AgentEnvelope-backed approval gateway can allow declared eval work while
  * refusing out-of-scope operations before execution.
  *
@@ -25,7 +25,7 @@ const identityRoot = Uint8Array.from(Array.from({ length: 32 }, (_, index) => in
 const now = Date.now();
 const oneHour = 60 * 60 * 1000;
 const here = dirname(fileURLToPath(import.meta.url));
-const registerPath = resolve(here, "../agent-escape-incidents/TTP-REGISTER.md");
+const registerPath = resolve(here, "../../../agent-escape-incidents/TTP-REGISTER.md");
 const registerText = readFileSync(registerPath, "utf8");
 
 const domain = projectDomainKey(

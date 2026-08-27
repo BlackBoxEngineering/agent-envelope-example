@@ -8,12 +8,12 @@
  *
  *   POST /sovereign/mint            — mint capabilities through hosted governance
  *   POST /sovereign/verify          — verify signatures against hosted records
+ *   POST /sovereign/agents/register-delegated
+ *                                  — publish autonomous public records
  *
- * Hosted mint uses API-key authentication because authority is derived from the
- * delegate and bot signatures. Record registration remains account-owned and
- * requires Cognito authentication. This example demonstrates mint receipts;
- * record-backed hosted verification works once the record is registered via the
- * portal.
+ * Hosted mint and delegated record publication use API-key authentication
+ * because authority is derived from the delegate, bot signatures, and completed
+ * hosted mint ledger entries.
  *
  * The hosted API enforces:
  *   - delegate signature validity
@@ -37,6 +37,7 @@
  */
 
 import { readFileSync, writeFileSync, existsSync } from 'node:fs'
+import { config } from '../../shared/config.js'
 import {
   seedAddress,
   verifyMintDelegate,
@@ -52,32 +53,12 @@ import {
 
 // ─── Config ──────────────────────────────────────────────────────────────────
 
-function loadEnv() {
-  try {
-    if (existsSync('.env.local')) {
-      const content = readFileSync('.env.local', 'utf8')
-      for (const line of content.split('\n')) {
-        const match = line.match(/^([^#=]+)=(.*)$/)
-        if (match) {
-          let value = match[2].split('#')[0].trim()
-          if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
-            value = value.slice(1, -1)
-          }
-          if (value && !process.env[match[1].trim()]) process.env[match[1].trim()] = value
-        }
-      }
-    }
-  } catch {}
-}
-
-loadEnv()
-
 const API_BASE = 'https://jemdjwteae.execute-api.us-east-1.amazonaws.com/v1'
-const API_KEY = process.env.AE_API_KEY
-const BOT_ID = process.env.AE_BOT_ID?.trim() || 'hosted-bot'
-const DELEGATE_ID = process.env.AE_DELEGATE_ID
-const BOT_KEY = process.env.AE_BOT_KEY
-const MINT_MATERIAL_HEX = process.env.AE_MINT_MATERIAL
+const API_KEY = config.apiKey()
+const BOT_ID = config.botId()
+const DELEGATE_ID = config.delegateId()
+const BOT_KEY = config.botKey()
+const MINT_MATERIAL_HEX = config.mintMaterial()
 const OWNER_USER_ID = process.env.AE_OWNER_USER_ID
 const HOSTED_RECORDS_PATH = 'hosted-records.json'
 
@@ -225,11 +206,35 @@ async function hostedVerify({ recordId, agentId, actionIndex, payload, signature
       expectedActionEnvelopeHash,
     }),
   })
+  const body = await readHostedJson(res)
   if (!res.ok) {
-    const text = await res.text()
-    throw new Error(`Verify failed: ${res.status} ${text}`)
+    throw new Error(`Verify failed: ${res.status} ${JSON.stringify(body)}`)
   }
-  return res.json()
+  return body
+}
+
+async function hostedRegisterDelegated(record, request, delegateId) {
+  const res = await fetch(`${API_BASE}/sovereign/agents/register-delegated`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': API_KEY,
+    },
+    body: JSON.stringify({ record, request, delegateId }),
+  })
+  const body = await readHostedJson(res)
+  if (!res.ok) {
+    throw new Error(body?.error || body?.message || `Register failed: ${res.status}`)
+  }
+  return body
+}
+
+async function readHostedJson(res) {
+  const body = await res.json()
+  if (body && typeof body === 'object' && typeof body.statusCode === 'number' && typeof body.body === 'string') {
+    return JSON.parse(body.body)
+  }
+  return body
 }
 
 // ─── Hosted bot ──────────────────────────────────────────────────────────────
@@ -246,6 +251,7 @@ class HostedBot {
     this.actionIndex = this.delegate.actionIndexPolicy?.min ?? 0
     this.pendingVerifications = []
     this.generatedRecords = []
+    this.recordRegistrations = []
   }
 
   canExecute(operation) {
@@ -300,6 +306,7 @@ class HostedBot {
       actionEnvelope,
       canonicalActionEnvelope: canonicalEnvelope,
       actionEnvelopeHash,
+      ...(this.delegate.legitimacyRef ? { legitimacyRef: this.delegate.legitimacyRef } : {}),
       expiry: actionEnvelope.timeWindow.notAfter
         ? new Date(actionEnvelope.timeWindow.notAfter).toISOString()
         : null,
@@ -387,15 +394,31 @@ class HostedBot {
       }
     }
 
-    // 8. Generate a seedless public record manifest when domain metadata is
-    // available. Publishing it remains an account-governed portal operation.
+    // 8. Generate and publish a seedless public record manifest when domain
+    // metadata is available.
     let recordId = null
     let actionEnvelopeHash = null
     if (this.canRegisterRecords()) {
       const actionEnvelope = this.buildActionEnvelope(agentId, operation, resources, actionIndex, timeWindow, 1)
       const record = this.buildPublicRecord(capability.agentAddress, actionEnvelope)
+      recordId = record.recordId
       actionEnvelopeHash = record.actionEnvelopeHash
       this.generatedRecords.push(record)
+      try {
+        const registration = await hostedRegisterDelegated(record, request, this.delegate.delegateId)
+        this.recordRegistrations.push({
+          recordId: record.recordId,
+          agentId,
+          accepted: registration.accepted === true,
+        })
+      } catch (err) {
+        this.recordRegistrations.push({
+          recordId: record.recordId,
+          agentId,
+          accepted: false,
+          error: err.message,
+        })
+      }
     }
 
     // Store for later hosted verification
@@ -420,6 +443,7 @@ class HostedBot {
         valid: receipt.valid,
       },
       recordId,
+      registration: this.recordRegistrations.find(item => item.recordId === recordId) ?? null,
     }
   }
 
@@ -448,7 +472,9 @@ class HostedBot {
         results.push({
           agentId: pending.agentId,
           valid: report.valid,
+          reason: report.reason,
           checks: report.checks,
+          report,
         })
       } catch (err) {
         results.push({
@@ -578,7 +604,7 @@ async function runDemo() {
   console.log(`   Agent id prefix: ${BOT_ID}`)
   if (bot.canRegisterRecords()) {
     console.log(`   ✓ Ready to mint and generate seedless public record manifests`)
-    console.log(`   Record registration remains account-owned and Cognito authenticated`)
+    console.log(`   Record registration: POST /sovereign/agents/register-delegated`)
     console.log(`   Record owner: ${bot.ownerUserId}`)
   } else {
     console.log(`   ✓ Ready to mint (no domainSummary - records won't be registered)`)
@@ -646,7 +672,13 @@ async function runDemo() {
         console.log(`       Sig:     ${result.signature}`)
         console.log(`       Receipt: ${result.receipt.id} (valid: ${result.receipt.valid})`)
         if (result.recordId) {
-          console.log(`       Record:  ${result.recordId} (registered)`)
+          const registration = result.registration
+          if (registration?.accepted) {
+            console.log(`       Record:  ${result.recordId} (registered)`)
+          } else {
+            console.log(`       Record:  ${result.recordId} (generated)`)
+            if (registration?.error) console.log(`       Publish: ${registration.error}`)
+          }
         }
       } else {
         console.log(`     ✗ BLOCKED at ${result.stage}`)
@@ -673,10 +705,11 @@ async function runDemo() {
       version: 1,
       generatedAt: new Date().toISOString(),
       registration: {
-        route: 'POST /sovereign/agents/register',
-        auth: 'Cognito account governance',
-        note: 'These seedless records are public metadata. Publish them from the owner account, not from a bot API key.',
+        route: 'POST /sovereign/agents/register-delegated',
+        auth: 'API key + stored delegate + hosted mint nonce',
+        note: 'These seedless records are public metadata published by an autonomous worker after hosted mint verification.',
       },
+      registrationResults: bot.recordRegistrations,
       records: bot.generatedRecords,
     }, null, 2))
     console.log()
@@ -694,6 +727,13 @@ async function runDemo() {
       console.log(`   ✓ ${v.agentId}: valid`)
     } else {
       console.log(`   ✗ ${v.agentId}: ${v.error || 'invalid'}`)
+      if (v.reason) console.log(`     reason: ${v.reason}`)
+      if (v.checks) {
+        console.log(`     checks: signature=${v.checks.signatureValid}, hash=${v.checks.actionEnvelopeHashMatches}, decay=${v.checks.decayed}, legitimacy=${v.checks.legitimacyActive}`)
+      }
+      if (v.report && !v.reason && !v.checks) {
+        console.log(`     report: ${JSON.stringify(v.report)}`)
+      }
     }
   }
 
@@ -706,7 +746,13 @@ async function runDemo() {
   console.log(`   Executed: ${executed.length} (${executed.map(r => r.tool).join(', ') || 'none'})`)
   console.log(`   Blocked:  ${blocked.length} (${blocked.map(r => r.tool).join(', ') || 'none'})`)
   if (bot.generatedRecords.length > 0) {
-    console.log(`   Records:  ${bot.generatedRecords.length} generated locally, 0 registered`)
+    const registered = bot.recordRegistrations.filter(item => item.accepted).length
+    console.log(`   Records:  ${bot.generatedRecords.length} generated, ${registered} registered`)
+    if (registered > 0) console.log(`             delegated API-key publication succeeded`)
+    const failed = bot.recordRegistrations.filter(item => !item.accepted)
+    for (const item of failed) {
+      console.log(`             ! ${item.recordId} publish failed: ${item.error}`)
+    }
     for (const record of bot.generatedRecords) {
       console.log(`             - ${record.recordId} (${record.agentId})`)
     }
@@ -718,8 +764,8 @@ async function runDemo() {
   console.log('   │ Receipts prove the mint was valid at that moment.          │')
   if (bot.generatedRecords.length > 0) {
     console.log('   │ Seedless public record manifests were generated locally.   │')
-    console.log('   │ Registration is intentionally portal/account governed.     │')
-    console.log('   │ Hosted record verification waits until records are live.   │')
+    console.log('   │ Registration used the delegated API-key route.            │')
+    console.log('   │ Hosted verification uses the published public records.    │')
   } else if (bot.canRegisterRecords()) {
     console.log('   │ Domain metadata was available, but no records were        │')
     console.log('   │ generated because no hosted mint completed successfully.  │')

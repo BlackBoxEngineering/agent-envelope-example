@@ -44,7 +44,14 @@ import {
   serializePublicActionRecord,
 } from "agent-envelope-sdk/avatar";
 import { DECAY_MODES } from "agent-envelope-sdk/constants";
-import { getAgentRecord, getStoredDelegate, mint, verifyAction as hostedVerifyAction } from "./hosted.js";
+import {
+  getAgentRecord,
+  getLegitimacyState,
+  getStoredDelegate,
+  mint,
+  registerDelegatedRecord,
+  verifyAction as hostedVerifyAction,
+} from "../../shared/hosted.js";
 
 // ─── Fixtures ────────────────────────────────────────────────────────────────
 
@@ -848,6 +855,41 @@ describe("hosted route contracts", () => {
     );
   });
 
+  it("getLegitimacyState calls GET /sovereign/legitimacy and validates legitimacyId", async () => {
+    const state = {
+      type: "agentenvelope.legitimacyState",
+      version: 1,
+      legitimacyId: "ae-legit-0123456789abcdef",
+      stateVersion: 1,
+      stateHash: "0x" + "aa".repeat(32),
+      status: "legitimate",
+      scope: { kind: "delegate", id: "ae-delegate-0123456789abcdef" },
+      policyRef: { policyId: "demo", policyVersion: 1, policyHash: "0x" + "bb".repeat(32) },
+      assumptions: [],
+      evidence: [],
+      createdAt: "2026-01-01T00:00:00.000Z",
+      updatedAt: "2026-01-01T00:00:00.000Z",
+    };
+
+    await withMockFetch(
+      { type: "agentenvelope.legitimacyStateResponse", version: 1, state, servedAt: "2026-01-01T00:00:00.000Z" },
+      async (calls) => {
+        const fetched = await getLegitimacyState("ae_test_key", state.legitimacyId, true);
+
+        assert.equal(fetched.state.legitimacyId, state.legitimacyId);
+        assert.equal(calls.length, 1);
+        assert.ok(calls[0].url.endsWith(`/sovereign/legitimacy?legitimacyId=${state.legitimacyId}&includeVersions=true`));
+        assert.equal(calls[0].options.headers["X-Api-Key"], "ae_test_key");
+
+        await assert.rejects(
+          () => getLegitimacyState("ae_test_key", "../bad"),
+          /legitimacyId is invalid/,
+        );
+        assert.equal(calls.length, 1);
+      },
+    );
+  });
+
   it("mint posts to /sovereign/mint with delegate and request", async () => {
     const delegate = makeDelegate();
     const request = makeRequest(delegate);
@@ -863,6 +905,42 @@ describe("hosted route contracts", () => {
         assert.equal(calls[0].options.method, "POST");
         assert.equal(calls[0].options.headers["X-Api-Key"], "ae_test_key");
         assert.deepEqual(JSON.parse(calls[0].options.body), { delegate, request });
+      },
+    );
+  });
+
+  it("registerDelegatedRecord posts to /sovereign/agents/register-delegated", async () => {
+    const delegate = makeDelegate();
+    const request = makeRequest(delegate);
+    const { record } = makePublicRecordFixture({
+      agentId: request.agentId,
+      operation: request.operation,
+      resources: request.resources,
+      actionIndex: request.actionIndex,
+      maxUses: request.maxUses,
+      notBefore: request.timeWindow.notBefore,
+      notAfter: request.timeWindow.notAfter,
+    });
+
+    await withMockFetch(
+      { accepted: true, delegated: true, recordId: record.recordId },
+      async (calls) => {
+        const response = await registerDelegatedRecord("ae_test_key", {
+          record,
+          request,
+          delegateId: delegate.delegateId,
+        });
+
+        assert.equal(response.accepted, true);
+        assert.equal(calls.length, 1);
+        assert.ok(calls[0].url.endsWith("/sovereign/agents/register-delegated"));
+        assert.equal(calls[0].options.method, "POST");
+        assert.equal(calls[0].options.headers["X-Api-Key"], "ae_test_key");
+        assert.deepEqual(JSON.parse(calls[0].options.body), {
+          record,
+          request,
+          delegateId: delegate.delegateId,
+        });
       },
     );
   });

@@ -37,6 +37,11 @@ export const config = {
     ),
   botId: () => requireEnv("AE_BOT_ID", "the agent id registered in the portal"),
   delegateId: () => process.env.AE_DELEGATE_ID?.trim() || null,
+  legitimacyId: () =>
+    requireEnv(
+      "AE_LEGITIMACY_ID",
+      "legitimacy state id from the portal Legitimacy page",
+    ),
   // The bot’s OWN identity signing key — this is the bot’s private key, not the
   // vault root. The bot address is derived from AE_BOT_KEY and may be bound in
   // the portal delegate policy. AE_BOT_ID is the public agent id label used in
