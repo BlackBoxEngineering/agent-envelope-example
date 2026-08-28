@@ -118,6 +118,14 @@ const REQUEST_INPUT = {
   requestedAt: "2026-01-01T00:01:00.000Z",
 };
 
+const REQUIRED_LEGITIMACY_REF = {
+  legitimacyId: "ae-legit-required",
+  stateVersion: 1,
+  stateHash: "0x" + "11".repeat(32),
+  policyId: "support-ops-delegate-legitimacy",
+  required: true,
+};
+
 function makeDelegate(input = {}) {
   return buildMintDelegate(freshDomainSeed(), { ...DELEGATE_INPUT, ...input });
 }
@@ -527,6 +535,31 @@ describe("portal-governed local layer", () => {
     assert.equal(verifyMintRequest(request, delegate).valid, true);
   });
 
+  it("buildMintRequest: includes signed legitimacyId for required hosted delegates", () => {
+    const delegate = makeDelegate({ legitimacyRef: REQUIRED_LEGITIMACY_REF });
+    const request = makeRequest(delegate, {
+      legitimacyId: delegate.legitimacyRef.legitimacyId,
+    });
+
+    assert.equal(request.legitimacyId, REQUIRED_LEGITIMACY_REF.legitimacyId);
+    assert.equal(verifyMintRequest(request, delegate).valid, true);
+  });
+
+  it("verifyMintRequest: rejects a swapped legitimacyId after signing", () => {
+    const delegate = makeDelegate({ legitimacyRef: REQUIRED_LEGITIMACY_REF });
+    const request = makeRequest(delegate, {
+      legitimacyId: delegate.legitimacyRef.legitimacyId,
+    });
+
+    const result = verifyMintRequest(
+      { ...request, legitimacyId: "ae-legit-wrong-scope-999" },
+      delegate,
+    );
+
+    assert.equal(result.valid, false);
+    assert.equal(result.reason, "bot signature invalid");
+  });
+
   it("verifyMintRequest: rejects tampered botSignature", () => {
     const delegate = buildMintDelegate(freshDomainSeed(), DELEGATE_INPUT);
     const request = buildMintRequest(freshBotSeed(), delegate, REQUEST_INPUT);
@@ -905,6 +938,24 @@ describe("hosted route contracts", () => {
         assert.equal(calls[0].options.method, "POST");
         assert.equal(calls[0].options.headers["X-Api-Key"], "ae_test_key");
         assert.deepEqual(JSON.parse(calls[0].options.body), { delegate, request });
+      },
+    );
+  });
+
+  it("mint posts required legitimacyId as part of the signed request body", async () => {
+    const delegate = makeDelegate({ legitimacyRef: REQUIRED_LEGITIMACY_REF });
+    const request = makeRequest(delegate, {
+      legitimacyId: delegate.legitimacyRef.legitimacyId,
+    });
+
+    await withMockFetch(
+      { valid: true, receiptId: "receipt-demo" },
+      async (calls) => {
+        await mint("ae_test_key", delegate, request);
+
+        const body = JSON.parse(calls[0].options.body);
+        assert.equal(body.request.legitimacyId, REQUIRED_LEGITIMACY_REF.legitimacyId);
+        assert.deepEqual(body.delegate.legitimacyRef, REQUIRED_LEGITIMACY_REF);
       },
     );
   });
