@@ -74,6 +74,11 @@ Hosted examples require portal values in `.env.local`:
 | `AE_MINT_MATERIAL` | One-time mint material from delegate issue |
 | `AE_LEGITIMACY_ID` | Hosted legitimacy id attached to the active delegate |
 
+For `npm run hosted:prompt:escalation`, the example can reconstruct the default support domain
+from `AE_DOMAIN_NAMESPACE=customer-support`, `AE_DOMAIN_ID=support-ops`, and
+`AE_DOMAIN_KIND=agent`. Delegate resources must be separate comma-separated entries, for example
+`thread:*, order:*`, not one combined `thread:* order:*` value.
+
 For the hosted prompt escalation demo, those shared values run in compact mode. For strict
 multi-bot hosted audit separation, create one delegate per role and use:
 
