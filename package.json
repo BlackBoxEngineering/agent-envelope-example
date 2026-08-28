@@ -24,7 +24,9 @@
     "multi:agent": "node examples/08-multi-agent/index.js",
     "hosted:multi": "node shared/preflight.js && node examples/09-hosted-multi-flow/index.js",
     "hosted:escalation": "node shared/preflight.js && node examples/10-hosted-escalation/index.js",
-    "hosted:overreach": "node shared/preflight.js && node examples/11-hosted-overreach/index.js"
+    "hosted:overreach": "node shared/preflight.js && node examples/11-hosted-overreach/index.js",
+    "hosted:prompt:escalation": "node examples/14-interactive-escalation/index.js",
+    "prompt:escalation": "node examples/14-interactive-escalation/index.js"
   },
   "dependencies": {
     "@aws-sdk/client-bedrock-runtime": "^3.1106.0",

@@ -21,6 +21,7 @@ examples/
   11-hosted-overreach/
   12-escape-incidents/
   13-mcp/
+  14-interactive-escalation/
 shared/
 tests/unit-contract/
 ```
@@ -31,7 +32,9 @@ Runtime handoff files stay at the repo root:
 
 - `.env.local`
 - `mint-delegate.json`
+- `mint-delegate-*.json`
 - `hosted-records.json`
+- `hosted-prompt-escalation-report.json`
 - `signed-payload.json`
 
 These are intentionally ignored by git.
@@ -42,7 +45,7 @@ These are intentionally ignored by git.
 |---|---|---|
 | Sovereign offline | Root to domain to action capability to local signature verification | `npm run sovereign`, `npm run use:cases`, `npm run vault:delegate` |
 | Hosted governance | Portal-issued delegate, API-keyed mint/verify, receipts, records, legitimacy | `npm run portal:setup`, `npm run bot`, `npm run verifier`, `npm run hosted:multi` |
-| LLM/workflow demos | Model intent constrained by delegated authority | `npm run llm:drift`, `npm run multi:agent`, `npm run hosted:escalation`, `npm run hosted:overreach` |
+| LLM/workflow demos | Model intent constrained by delegated authority | `npm run llm:drift`, `npm run multi:agent`, `npm run hosted:escalation`, `npm run hosted:overreach`, `npm run hosted:prompt:escalation` |
 
 ## Setup
 
@@ -71,6 +74,16 @@ Hosted examples require portal values in `.env.local`:
 | `AE_MINT_MATERIAL` | One-time mint material from delegate issue |
 | `AE_LEGITIMACY_ID` | Hosted legitimacy id attached to the active delegate |
 
+For the hosted prompt escalation demo, those shared values run in compact mode. For strict
+multi-bot hosted audit separation, create one delegate per role and use:
+
+| Role | Variables |
+|---|---|
+| ReaderBot | `AE_READER_BOT_ID`, `AE_READER_DELEGATE_ID`, `AE_READER_BOT_KEY`, `AE_READER_MINT_MATERIAL`, `AE_READER_LEGITIMACY_ID` |
+| RefundBot | `AE_REFUND_BOT_ID`, `AE_REFUND_DELEGATE_ID`, `AE_REFUND_BOT_KEY`, `AE_REFUND_MINT_MATERIAL`, `AE_REFUND_LEGITIMACY_ID` |
+| MessengerBot | `AE_MESSENGER_BOT_ID`, `AE_MESSENGER_DELEGATE_ID`, `AE_MESSENGER_BOT_KEY`, `AE_MESSENGER_MINT_MATERIAL`, `AE_MESSENGER_LEGITIMACY_ID` |
+| AuditBot | `AE_AUDIT_BOT_ID`, `AE_AUDIT_DELEGATE_ID`, `AE_AUDIT_BOT_KEY`, `AE_AUDIT_MINT_MATERIAL`, `AE_AUDIT_LEGITIMACY_ID` |
+
 Run the setup check:
 
 ```bash
@@ -94,6 +107,7 @@ npm run verifier
 npm run hosted:multi
 npm run hosted:escalation
 npm run hosted:overreach
+npm run hosted:prompt:escalation
 ```
 
 Run every completing scenario:
@@ -103,6 +117,7 @@ npm run test:all
 ```
 
 `npm run mcp` starts a server and is therefore not part of `test:all`.
+`npm run hosted:prompt:escalation` opens an interactive prompt and is also not part of `test:all`.
 
 ## Current Hosted Showcase
 
@@ -122,3 +137,14 @@ It proves:
 - legitimacy ref propagation when the delegate has a hosted legitimacy state
 
 The generated verifier-safe records are written to `hosted-records.json`.
+
+The best hostile-prompt product demo is:
+
+```bash
+npm run hosted:prompt:escalation
+```
+
+Allowed actions produce hosted mint receipts, delegated public records, hosted verification reports,
+and server-side audit events. Blocked prompt-escalation attempts show the role, delegate, resource,
+business-policy, mint, registration, or verification boundary that stopped them. The local report is
+written to `hosted-prompt-escalation-report.json`.

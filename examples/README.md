@@ -21,6 +21,7 @@ The root still holds runtime handoff files such as `.env.local`, `mint-delegate.
 | `11-hosted-overreach` | `npm run hosted:overreach` | Helpful overreach partially allowed and partially blocked |
 | `12-escape-incidents` | `npm run escape:incidents` | Known unsafe operation/resource attempts blocked before execution |
 | `13-mcp` | `npm run mcp` | MCP integration server |
+| `14-interactive-escalation` | `npm run hosted:prompt:escalation` | Hosted multi-bot prompt pressure test with legitimacy receipts and reports |
 
 Run the full completing sweep with:
 
@@ -29,3 +30,4 @@ npm run test:all
 ```
 
 `npm run mcp` is intentionally not included in `test:all` because it starts a server.
+`npm run hosted:prompt:escalation` is also left out because it opens an interactive prompt.
