@@ -30,7 +30,7 @@
   },
   "dependencies": {
     "@aws-sdk/client-bedrock-runtime": "^3.1106.0",
-    "agent-envelope-mcp": "latest",
+    "agent-envelope-mcp": "^1.1.0",
     "agent-envelope-sdk": "latest"
   },
   "engines": {
